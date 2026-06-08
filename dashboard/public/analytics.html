@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics — amazonLSN</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+    .header{background:#161b22;border-bottom:1px solid #30363d;padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
+    .header-left{display:flex;align-items:center;gap:12px}
+    .logo{width:36px;height:36px;background:linear-gradient(135deg,#ff9900,#ffb84d);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#000}
+    .header h1{font-size:18px;font-weight:700}
+    .header h1 span{color:#ff9900}
+    .badge{background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.3);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700}
+    .refresh-btn{background:#ff9900;color:#000;border:none;border-radius:8px;padding:8px 18px;font-weight:700;font-size:13px;cursor:pointer}
+    .refresh-btn:hover{background:#ffb84d}
+    .container{max-width:1200px;margin:0 auto;padding:28px 24px}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+    .stat-card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:20px}
+    .stat-label{font-size:12px;color:#8b949e;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+    .stat-value{font-size:32px;font-weight:800}
+    .stat-value.green{color:#22c55e}.stat-value.orange{color:#ff9900}.stat-value.blue{color:#60a5fa}.stat-value.purple{color:#a855f7}
+    .stat-sub{font-size:11px;color:#8b949e;margin-top:4px}
+    .section{background:#161b22;border:1px solid #30363d;border-radius:12px;margin-bottom:24px;overflow:hidden}
+    .section-header{padding:16px 20px;border-bottom:1px solid #30363d;display:flex;align-items:center;justify-content:space-between}
+    .section-title{font-size:14px;font-weight:700}
+    .section-count{font-size:12px;color:#8b949e;background:#21262d;border-radius:6px;padding:2px 8px}
+    table{width:100%;border-collapse:collapse}
+    th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #30363d;background:#0d1117}
+    td{padding:12px 16px;font-size:13px;border-bottom:1px solid #21262d;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:rgba(255,255,255,0.02)}
+    .ip-badge{font-family:monospace;font-size:12px;background:#21262d;border-radius:6px;padding:2px 8px;color:#e6edf3}
+    .browser-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px}
+    .browser-Chrome{background:rgba(251,188,4,0.15);color:#fbc003}.browser-Edge{background:rgba(0,120,212,0.15);color:#60a5fa}.browser-Firefox{background:rgba(255,103,31,0.15);color:#ff671f}.browser-Safari{background:rgba(0,162,255,0.15);color:#00a2ff}.browser-Other{background:rgba(139,148,158,0.15);color:#8b949e}.browser-BotAPI{background:rgba(168,85,247,0.15);color:#a855f7}
+    .status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px}
+    .dot-active{background:#22c55e;box-shadow:0 0 6px #22c55e}.dot-recent{background:#ff9900}.dot-inactive{background:#8b949e}
+    .visits-bar{height:6px;background:#21262d;border-radius:3px;overflow:hidden;min-width:80px}
+    .visits-fill{height:100%;background:linear-gradient(90deg,#ff9900,#ffb84d);border-radius:3px}
+    .path-tag{font-family:monospace;font-size:11px;background:#21262d;color:#8b949e;padding:1px 6px;border-radius:4px}
+    .path-refresh{color:#22c55e}.path-home{color:#60a5fa}
+    .empty{text-align:center;padding:40px;color:#8b949e;font-size:14px}
+    .last-updated{font-size:11px;color:#8b949e;margin-top:8px}
+    @media(max-width:768px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="logo">az</div>
+    <h1>amazon<span>LSN</span> &nbsp;·&nbsp; Analytics</h1>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span class="badge" id="liveBadge">● LIVE</span>
+    <button class="refresh-btn" onclick="load()">↻ Refresh</button>
+    <a href="/" style="color:#8b949e;font-size:13px;text-decoration:none;">← Dashboard</a>
+  </div>
+</div>
+<div class="container">
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">🟢 Active Now</div><div class="stat-value green" id="activeNow">—</div><div class="stat-sub">last 10 minutes</div></div>
+    <div class="stat-card"><div class="stat-label">📅 Today's Visitors</div><div class="stat-value orange" id="todayVisitors">—</div><div class="stat-sub">unique IPs today</div></div>
+    <div class="stat-card"><div class="stat-label">👁 Today's Page Views</div><div class="stat-value blue" id="todayViews">—</div><div class="stat-sub">requests today</div></div>
+    <div class="stat-card"><div class="stat-label">🌐 All-Time Visitors</div><div class="stat-value purple" id="totalVisitors">—</div><div class="stat-sub">unique IPs total</div></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-title">👤 Visitor Sessions</span><span class="section-count" id="sessionCount">0 visitors</span></div>
+    <table><thead><tr><th>Status</th><th>IP Address</th><th>Browser</th><th>First Seen</th><th>Last Seen</th><th>Total Visits</th><th>Activity</th></tr></thead>
+    <tbody id="sessionsBody"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody></table>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-title">📋 Recent Activity</span><span class="section-count">last 100 events</span></div>
+    <table><thead><tr><th>Time (IST)</th><th>IP Address</th><th>Browser</th><th>Page / Action</th></tr></thead>
+    <tbody id="eventsBody"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody></table>
+  </div>
+  <div class="last-updated" id="lastUpdated"></div>
+</div>
+<script>
+function fmt(iso){if(!iso)return"—";const d=new Date(iso);return d.toLocaleString("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",hour12:true})}
+function timeAgo(iso){if(!iso)return"—";const diff=Date.now()-new Date(iso).getTime();const m=Math.floor(diff/60000);if(m<1)return"just now";if(m<60)return`${m}m ago`;const h=Math.floor(m/60);if(h<24)return`${h}h ago`;return`${Math.floor(h/24)}d ago`}
+function statusDot(ls){const diff=Date.now()-new Date(ls).getTime();const m=diff/60000;if(m<10)return`<span class="status-dot dot-active"></span>Active`;if(m<60)return`<span class="status-dot dot-recent"></span>Recent`;return`<span class="status-dot dot-inactive"></span>Away`}
+function browserBadge(browser){const key=(browser||"Other").replace("/","");const cls=key==="BotAPI"?"browser-BotAPI":`browser-${key}`;const icons={Chrome:"🌐",Edge:"🔷",Firefox:"🦊",Safari:"🧭","Bot/API":"🤖",Other:"❓"};return`<span class="browser-badge ${cls}">${icons[browser]||"❓"} ${browser}</span>`}
+function pathTag(p){if(p==="/"||p==="/analytics")return`<span class="path-tag path-home">${p}</span>`;if(p.includes("refresh"))return`<span class="path-tag path-refresh">↻ refresh</span>`;return`<span class="path-tag">${p}</span>`}
+async function load(){try{const r=await fetch("/api/analytics");const d=await r.json();document.getElementById("activeNow").textContent=d.activeNow;document.getElementById("todayVisitors").textContent=d.todayUniqueVisitors;document.getElementById("todayViews").textContent=d.todayPageViews;document.getElementById("totalVisitors").textContent=d.totalUniqueVisitors;document.getElementById("sessionCount").textContent=`${d.sessions.length} visitor${d.sessions.length!==1?"s":""}`;const maxV=Math.max(...d.sessions.map(s=>s.totalVisits),1);document.getElementById("sessionsBody").innerHTML=d.sessions.length===0?`<tr><td colspan="7" class="empty">No visitors yet — share the link!</td></tr>`:d.sessions.map(s=>`<tr><td>${statusDot(s.lastSeen)}</td><td><span class="ip-badge">${s.ip}</span></td><td>${browserBadge(s.browser)}</td><td>${fmt(s.firstSeen)}</td><td title="${timeAgo(s.lastSeen)}">${fmt(s.lastSeen)}</td><td style="font-weight:700;color:#ff9900">${s.totalVisits}</td><td><div class="visits-bar"><div class="visits-fill" style="width:${Math.round(s.totalVisits/maxV*100)}%"></div></div></td></tr>`).join("");document.getElementById("eventsBody").innerHTML=d.recentEvents.length===0?`<tr><td colspan="4" class="empty">No activity yet.</td></tr>`:d.recentEvents.slice(0,50).map(e=>`<tr><td style="color:#8b949e;font-size:12px">${fmt(e.time)}</td><td><span class="ip-badge">${e.ip}</span></td><td>${browserBadge(e.browser)}</td><td>${pathTag(e.path)}</td></tr>`).join("");document.getElementById("lastUpdated").textContent="Last updated: "+new Date().toLocaleTimeString("en-IN",{timeZone:"Asia/Kolkata"})}catch(e){document.getElementById("sessionsBody").innerHTML=`<tr><td colspan="7" class="empty">Error loading data.</td></tr>`}}
+load();setInterval(load,30000);
+</script>
+</body>
+</html>
